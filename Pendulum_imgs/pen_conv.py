@@ -171,9 +171,9 @@ class NormalDistribution:
                               + sum(torch.pow(mu_1 - mu_0, 2) / sigma_1) - k
                               + torch.log(d)
                               )
-        # t1 = torch.distributions.Normal(q_z_next.mean, (q_z_next.logvar / 2).exp())
-        # t2 = torch.distributions.Normal(q_z_next_pred.mean, (q_z_next_pred.logvar / 2).exp())
-        # KL = torch.distributions.kl_divergence(t1, t2).mean()
+        t1 = torch.distributions.Normal(q_z_next.mean, (q_z_next.logvar / 2).exp())
+        t2 = torch.distributions.Normal(q_z_next_pred.mean, (q_z_next_pred.logvar / 2).exp())
+        KL = torch.distributions.kl_divergence(t1, t2).mean()
         return KL
 
 

@@ -9,11 +9,12 @@ git clone https://github.com/suruchi1997/Controllability-Constrained-Latent-Mode
   ```  
  * pen_conv.py consists of the training logic. execute pen_conv.py -rs. -rs is the random seed provided for weight initialization. The  base models and controllability-constrained models are trained and saved in the conv_mul/ folder.
    ```
-   python pen_conv.py {integer}
-  ```  
+    python pen_conv.py {integer}
+   ```  
  * Then mpc_eval2.py is used to execute the evaluation process.
+
    ```
-   python mpc_eval2.py {integer} 
+    python mpc_eval2.py {integer} 
    ```
 ## For CartPole_Env
 1) Make a directory conv_new

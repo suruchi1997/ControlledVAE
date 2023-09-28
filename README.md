@@ -1,4 +1,7 @@
 # Controllability-Constrained-Latent-Models
+```
+git clone 
+```
 ## Pendulum_Env
  1) make a directory conv_mul
  2) pen_conv.py consists of the training logic. execute pen_conv.py -rs. -rs is the random seed provided for weight initialization. The  base models and controllability-constrained models are trained and saved in the conv_mul/ folder.

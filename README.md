@@ -7,7 +7,7 @@ git clone https://github.com/suruchi1997/Controllability-Constrained-Latent-Mode
    ```
     mkdir conv_mul
    ```  
- * pen_conv.py consists of the training logic. execute pen_conv.py -rs. -rs is the random seed provided for weight initialization. The  base models and controllability-constrained models are trained and saved in the conv_mul/ folder.
+ * pen_conv.py consists of the training logic. Execute pen_conv.py -rs. -rs is the random seed provided for weight initialization. The  base models and controllability-constrained models are trained and saved in the conv_mul/ folder.
    ```
     python pen_conv.py {integer}
    ```  
@@ -17,6 +17,17 @@ git clone https://github.com/suruchi1997/Controllability-Constrained-Latent-Mode
     python mpc_eval2.py {integer} 
    ```
 ## For CartPole_Env
-1) Make a directory conv_new
-2) cp_cont4.py consists of the training logic execute in similar manner as for pendulum envt
-3) cp_mpc_eval1.py is used for evaluating the performance of the models
+ * Make a directory conv_new. 
+   ```
+    mkdir conv_mul
+   ```  
+ * cp_cont4.py consists of the training logic. Execute cp_cont4.py -rs. -rs is the random seed provided for weight initialization. The  base models and controllability-constrained models are trained and saved in the conv_new/ folder.
+   
+   ```
+    python cp_cont4 .py {integer}
+   ```  
+ * cp_mpc_eval1.py is used for evaluating the performance of the models
+
+   ```
+    python cp_mpc_eval1.py {integer}
+   ```

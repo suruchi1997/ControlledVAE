@@ -2,6 +2,11 @@
 ```
 git clone https://github.com/suruchi1997/Controllability-Constrained-Latent-Models.git
 ```
+* Go to the respective folder
+* install required libararies
+```
+pip install requirements.txt 
+```
 ## For Pendulum_Env
  * make a directory conv_mul
    ```

@@ -2,7 +2,7 @@
 ```
 git clone https://github.com/suruchi1997/Controllability-Constrained-Latent-Models.git
 ```
-* Go to the respective folder
+* Go to the respective folder (cartpole/pendulum)
 * install required libararies
 ```
 pip install requirements.txt 

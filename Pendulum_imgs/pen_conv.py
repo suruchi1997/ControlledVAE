@@ -48,6 +48,7 @@ def save_data(t_size, c, n, a):
     print("saved")
 
 # collect random samples
+#use_cached = True helps to utilize the cached dataset
 def data_coll(t_size, env, use_cached=True):
     if use_cached and os.path.exists(f"ac.txt") and os.path.exists("curr") and os.path.exists("next"):
         print("loading cached data")
@@ -105,6 +106,8 @@ def weights_init(m):
 
 
 # computing overall loss
+# recon_term - (x_curr,x_reconstructed)
+#pred_term - (x_next , x_predicted_by_trans)
 def compute_loss(x, x_next, q_z_next, x_recon, x_next_pred, q_z, q_z_next_pred, min_svd_mean, lamda, beta=0.05,
                  batch_size=256):
     recon_term = -torch.mean(torch.sum(x.view(batch_size, 4608) * torch.log(1e-5 + x_recon)
@@ -262,10 +265,11 @@ class E2C(nn.Module):
 
         return mean, NormalDistribution(mean, logvar=q_z_t.logvar, A=A_t), svd_mean
 
+    #returns  encoded input
     def encode(self, x):
 
         return self.encoder(x)
-
+    # returns decoded output
     def decode(self, z):
 
         return self.decoder(z)
@@ -370,6 +374,8 @@ def train(
             print("make")
             os.mkdir("conv_mul/conv"+str(seed1))
         torch.save(e2c.state_dict(), "conv_mul/conv"+str(seed1)+"/base_mod.pth")
+
+    # plotting loss components
     if debug_vis:
         plt.subplot(321)
         plt.plot(rec1)
@@ -403,6 +409,7 @@ if __name__ == "__main__":
         pred1 = []
         kl1 = []
         consi1 = []
+        # start to train using base_mod
         if b=="base_mod":
             train(beta=0, minimize_svd_grm=True, debug_vis=True,base_mod=True)  # 0.05
         else:

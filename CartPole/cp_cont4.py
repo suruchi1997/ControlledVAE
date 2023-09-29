@@ -105,6 +105,8 @@ def weights_init(m):
         torch.nn.init.orthogonal_(m.weight)
 
 # computation of total loss
+# recon_term - (x_curr,x_reconstructed)
+#pred_term - (x_next , x_predicted_by_trans)
 def compute_loss(x, x_next, q_z_next, x_recon, x_next_pred, q_z, q_z_next_pred, min_svd_mean,batch_size, lamda,beta):
 
     # lower-bound loss
@@ -398,6 +400,8 @@ def train(
             print("make")
             os.mkdir("conv_new1/conv"+str(seed1))
         torch.save(e2c.state_dict(), "conv_new1/conv"+str(seed1)+"/base_mod.pth")
+
+    # plotting loss components
     if debug_vis:
         plt.subplot(321)
         plt.plot(rec1)

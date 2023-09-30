@@ -6,28 +6,12 @@ import torch.optim as optim
 import random
 import matplotlib.pyplot as plt
 import gym
-from cartpole import  ContinuousCartPoleEnv
+from cartpole import ContinuousCartPoleEnv
 import argparse
 import cv2
-gym.logger.set_level(40)
-device = torch.device("cuda")
-env = ContinuousCartPoleEnv()
-parser = argparse.ArgumentParser(description='My Program')
-parser.add_argument('rs', help='Random seed')
-args = parser.parse_args()
-seed1=int(float(args.rs))
-torch.manual_seed(seed1)
-
-
 import os
 
-consi1 = []
-kl1 = []
-rec1 = []
-pred1 = []
-min_eig=[]
-
-os.environ['SDL_VIDEODRIVER'] = 'dummy'
+device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 
 #load saved data
 def load_data(t_size):
@@ -55,7 +39,6 @@ def save_data(t_size, c, n, a):
             f1.write(str(a[i1]) + "\n")
     print("saved")
 
-
 # collect data
 def data_coll(t_size,use_cached=True):
     if use_cached and os.path.exists(f"ac3.txt") and os.path.exists("curr3") and os.path.exists("next3"):
@@ -71,13 +54,9 @@ def data_coll(t_size,use_cached=True):
         env.reset(j)
 
         img1 = env.render("rgb_array")
-
         env.step(0.0)
-
         img2 = env.render("rgb_array")
-
         a2 = np.random.uniform(-1,1)
-
         env.step(a2)
 
         img3 = env.render("rgb_array")
@@ -86,7 +65,6 @@ def data_coll(t_size,use_cached=True):
         im1 = Image.fromarray(img1).convert('L').resize((80, 80))
         im2 = Image.fromarray(img2).convert('L').resize((80, 80))
         im3 = np.hstack((im1, im2))
-
 
         c_st.append(im3)
 
@@ -106,9 +84,8 @@ def weights_init(m):
 
 # computation of total loss
 # recon_term - (x_curr,x_reconstructed)
-#pred_term - (x_next , x_predicted_by_trans)
+# pred_term - (x_next , x_predicted_by_trans)
 def compute_loss(x, x_next, q_z_next, x_recon, x_next_pred, q_z, q_z_next_pred, min_svd_mean,batch_size, lamda,beta):
-
     # lower-bound loss
     recon_term = -torch.mean(torch.sum(x.view(batch_size, 12800) * torch.log(1e-5 + x_recon)
                                        + (1 - x.view(batch_size, 12800)) * torch.log(1e-5 + 1 - x_recon), dim=1))
@@ -117,17 +94,10 @@ def compute_loss(x, x_next, q_z_next, x_recon, x_next_pred, q_z, q_z_next_pred, 
                                       dim=1))
 
     kl_term = - 0.5 * torch.mean(torch.sum(1 + q_z.logvar - q_z.mean.pow(2) - q_z.logvar.exp(), dim=1))
-
     lower_bound = recon_term + pred_loss + kl_term
-
-
     consis_term = NormalDistribution.KL_divergence(q_z_next_pred, q_z_next)
 
-    consi1.append(consis_term.item())
-    kl1.append(kl_term.item())
-    rec1.append(recon_term.item())
-    pred1.append(pred_loss.item())
-    return lower_bound + lamda * consis_term - beta* min_svd_mean
+    return lower_bound + lamda * consis_term - beta* min_svd_mean, (consis_term, kl_term, recon_term, pred_loss)
 
 #Normal Distribution  return cov matrix
 def NormDist(mean, logvar, A=None):
@@ -144,7 +114,6 @@ def NormDist(mean, logvar, A=None):
 # Normal Distribution to store mean and variance
 class NormalDistribution:
     def __init__(self, mean, logvar, A=None):
-
         self.mean = mean
         self.logvar = logvar
         self.A = A
@@ -158,13 +127,11 @@ class NormalDistribution:
     @staticmethod
     # KL divergence between (z_hat_t+1,z_t+1)
     def KL_divergence(q_z_next_pred, q_z_next):
-
         cov1 = NormDist(q_z_next.mean, q_z_next.logvar)
         cov2 = NormDist(q_z_next_pred.mean, q_z_next_pred.logvar, q_z_next_pred.A)
 
         mu_0 = q_z_next_pred.mean
         mu_1 = q_z_next.mean
-        sigma_0 = torch.exp(q_z_next_pred.logvar)
         sigma_1 = torch.exp(q_z_next.logvar)
 
         k = float(q_z_next_pred.mean.size(1))
@@ -191,21 +158,13 @@ class E2C(nn.Module):
         # encoder
         self.encoder = nn.Sequential(
             nn.Conv2d(in_channels=2, out_channels=32, kernel_size=5, stride=1, padding=2),
-            # nn.BatchNorm2d(3),
             nn.ReLU(),
-
             nn.Conv2d(in_channels=32, out_channels=32, kernel_size=5, stride=2, padding=2),
-            # nn.BatchNorm2d(32),
             nn.ReLU(),
-
             nn.Conv2d(in_channels=32, out_channels=32, kernel_size=5, stride=2, padding=2),
-            # nn.BatchNorm2d(32),
             nn.ReLU(),
-
             nn.Conv2d(in_channels=32, out_channels=10, kernel_size=5, stride=2, padding=2),
-            # nn.BatchNorm2d(10),
             nn.ReLU(),
-
             nn.Flatten(),
             nn.Linear(10 * 10 * 10, 200),
             nn.ReLU(),
@@ -221,15 +180,12 @@ class E2C(nn.Module):
             nn.ConvTranspose2d(in_channels=10, out_channels=32, kernel_size=5, stride=1, padding=2),
             nn.Upsample(scale_factor=2),
             nn.ReLU(),
-
             nn.ConvTranspose2d(in_channels=32, out_channels=32, kernel_size=5, stride=1, padding=2),
             nn.Upsample(scale_factor=2),
             nn.ReLU(),
-
             nn.ConvTranspose2d(in_channels=32, out_channels=32, kernel_size=5, stride=1, padding=2),
             nn.Upsample(scale_factor=2),
             nn.ReLU(),
-
             nn.ConvTranspose2d(in_channels=32, out_channels=2, kernel_size=5, stride=1, padding=2),
             nn.Flatten(),
             nn.Sigmoid()
@@ -257,7 +213,6 @@ class E2C(nn.Module):
 
     # transition function to compute the grammian
     def transition(self, z_bar_t, q_z_t, u_t,batch_size):
-
         h_t = self.trans(z_bar_t)
         B_t = self.fc_B(h_t)
         o_t = self.fc_o(h_t)
@@ -280,21 +235,14 @@ class E2C(nn.Module):
 
         if batch_size>0:
             min_svd_mean = torch.mean(torch.log(torch.min(torch.linalg.svd(gra1)[1], dim=1).values))
-            min_eig.append(min_svd_mean.item())
-
-
 
         return mean, NormalDistribution(mean, logvar=q_z_t.logvar, A=A_t), min_svd_mean
 
     def encode(self, x):
-
         return self.encoder(x)
 
     def decode(self, z):
-
         return self.decoder(z)
-
-
 
     def reparam(self, mean, logvar):
         sigma = (logvar / 2).exp()
@@ -305,7 +253,6 @@ class E2C(nn.Module):
         mu, logvar = self.encode(x).chunk(2, dim=1)
         z = self.reparam(mu, logvar)
         q_z = NormalDistribution(mu, logvar)
-
         x_recon = self.decode(z)
 
         z_next, q_z_next_pred, min_svd_mean = self.transition(z, q_z, u,batch_size)
@@ -333,50 +280,35 @@ def train(
         epochs=55000,
         training_size=15000,
         lr=0.0001,
-        weight_decay=0.002,
         beta=0.05,
-        model_path="model",
-        f_eval=None,
-        f_eval_args=(None,),
-        eval_freq=5000,
-        minimize_svd_grm=False,
-        minimize_log_det_gram=False,
         debug_vis=False,
-        base_mod=False
+        base_mod=False,
+        seed=0,
 ):
     gym.logger.set_level(40)
-
-
     env = ContinuousCartPoleEnv()
-
     curr, next, ac = data_coll(training_size)
 
-
-
     c1 = torch.tensor(1 - (np.array(curr)) / 255.0).view(-1, 2, 80, 80).float().to(device)
-
     n1 = torch.tensor(1 - (np.array(next)) / 255.0).view(-1, 2, 80, 80).float().to(device)
-
     a1 = torch.tensor(np.array(ac)).float().to(device)
-
     e2c = E2C().to(device)
-
     optimizer = optim.Adam(e2c.parameters(), lr=lr)
-
 
     if base_mod:
         epochs= 70000
-    if not base_mod:
+    else:
+        e2c.load_state_dict(torch.load("conv_new1/conv" + str(seed) + "/base_mod.pth", map_location=device))
 
-        e2c.load_state_dict(torch.load("conv_new1/conv"+str(seed1)+"/base_mod.pth", map_location=device))
+    consi1 = []
+    kl1 = []
+    rec1 = []
+    pred1 = []
+    min_eig = []
 
     for i in range(epochs):
-
-
         e2c.train()
-
         start_idx = (batch_size * i) % training_size
-
         if start_idx + batch_size >= training_size:
             start_idx = random.randint(0, training_size - batch_size)
 
@@ -384,7 +316,14 @@ def train(
         u_t1 = a1[start_idx:start_idx + batch_size]
         x_p1 = n1[start_idx:start_idx + batch_size]
         x_recon, x_next_pred, q_z, q_z_next_pred, q_z_next, min_svd_mean = e2c(x_t1, u_t1, x_p1,batch_size)
-        total = compute_loss(x_t1, x_p1, q_z_next, x_recon, x_next_pred, q_z, q_z_next_pred, min_svd_mean,batch_size, 1.0,beta)
+
+        total, (consis_term, kl_term, recon_term, pred_loss) = compute_loss(x_t1, x_p1, q_z_next, x_recon, x_next_pred, q_z, q_z_next_pred, min_svd_mean,batch_size, 1.0,beta)
+
+        consi1.append(consis_term.item())
+        kl1.append(kl_term.item())
+        rec1.append(recon_term.item())
+        pred1.append(pred_loss.item())
+
         if i%2000==0:
             print(total)
 
@@ -392,14 +331,12 @@ def train(
         total.backward()
         optimizer.step()
 
-
+    if not os.path.exists("conv_new1/conv" + str(seed)):
+        os.mkdir("conv_new1/conv" + str(seed))
     if not base_mod:
-        torch.save(e2c.state_dict(), "conv_new1/conv"+str(seed1)+"/mod" + str(beta) + ".pth")
+        torch.save(e2c.state_dict(), "conv_new1/conv" + str(seed) + "/mod" + str(beta) + ".pth")
     else:
-        if not os.path.exists("conv_new1/conv"+str(seed1)):
-            print("make")
-            os.mkdir("conv_new1/conv"+str(seed1))
-        torch.save(e2c.state_dict(), "conv_new1/conv"+str(seed1)+"/base_mod.pth")
+        torch.save(e2c.state_dict(), "conv_new1/conv" + str(seed) + "/base_mod.pth")
 
     # plotting loss components
     if debug_vis:
@@ -423,23 +360,27 @@ def train(
         plt.plot(min_eig)
         plt.title("min_svd_grammain")
         if not base_mod:
-            plt.savefig("conv_new1/conv"+str(seed1)+"/plot" + str(beta) + ".png")
+            plt.savefig("conv_new1/conv" + str(seed) + "/plot" + str(beta) + ".png")
             plt.show()
 
 
-
-
-
 if __name__ == '__main__':
-    betas = ["base_mod",0.0,0.0005,0.0007,0.007,0.002,0.004,0.01,0.005,0.05,0.5,0.7,0.9,1.0]
+    env = ContinuousCartPoleEnv()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--rs', default=None, type=int, help='Random seed')
+    args = parser.parse_args()
+    if args.rs is None:
+        seed = random.randint(0, 1e16)
+    else:
+        seed = args.rs
+    torch.manual_seed(seed)
 
+    os.environ['SDL_VIDEODRIVER'] = 'dummy'
+    betas = ["base_mod",0.0,0.0005,0.0007,0.007,0.002,0.004,0.01,0.005,0.05,0.5,0.7,0.9,1.0]
+    if not os.path.exists("conv_mul/"):
+        os.mkdir("conv_mul/")
     for b in betas:
-        min_eig = []
-        rec1 = []
-        pred1 = []
-        kl1 = []
-        consi1 = []
         if b == "base_mod":
-            train(beta=0, minimize_svd_grm=True, debug_vis=True, base_mod=True)  # 0.05
+            train(beta=0, debug_vis=True, base_mod=True, seed=seed)
         else:
-            train(beta=b, minimize_svd_grm=True, debug_vis=True, base_mod=False)
+            train(beta=b, debug_vis=True, base_mod=False, seed=seed)

@@ -5,11 +5,17 @@ import sys
 from scipy.optimize import minimize
 from pen_conv import E2C
 from pendulum1 import PendulumEnv1
-from PIL import  Image
 from torch.utils.tensorboard import SummaryWriter
 from itertools import repeat
 import multiprocessing as mp
 import cv2
+import csv
+
+
+sys.setrecursionlimit(3000)
+device = torch.device("cpu")
+
+
 def split_images(img):
     list_split = []
     for im in img:
@@ -18,23 +24,13 @@ def split_images(img):
         w = w // 2
         im = im.squeeze(0)
         im = im[:, w:]
-
         list_split.append(im.reshape(1, 48, 48))
-
     return list_split
-
-sys.setrecursionlimit(3000)
-device = torch.device("cpu")
-import  csv
-
-
-
 
 
 def min_svd(A,B,O):
     mat1 = torch.stack((B, A @ B)).view( 2, 2)
     gra1 = (mat1.T@mat1)
-
     min_svd = torch.min(torch.linalg.svd(gra1)[1])
     max_svd= torch.max(torch.linalg.svd(gra1)[1])
     
@@ -44,8 +40,6 @@ def min_svd(A,B,O):
 def step_new(x,u,e2c):
     x = torch.tensor(x).float().view(1, 2).to(device)
     h = e2c.trans(x.view(1, 2))
-
-
     con = torch.tensor([u]).view(1, 1).float().to(device)
     B_ = e2c.fc_B(h)
     o_ = e2c.fc_o(h)
@@ -53,24 +47,19 @@ def step_new(x,u,e2c):
     x = torch.mm(A_.view(2, 2), x.view(2, 1)) + torch.mm(B_.view(2, 1), con.view(1, 1)) + o_.view(2, 1)
 
     if torch.is_tensor(x):
-
         return x.cpu().detach().numpy()
     else:
         return x
+
 #cost function
 def cost_new(u,x_t,z_g,e2c):
     x1 = np.array(x_t).reshape(1,2)
-
-
-
     s=0
     goal=z_g.cpu().detach().numpy().reshape(1, 2)
     s+=0.5*np.sum((goal - x1) ** 2)
     for m in range(len(u)):
-
         x1=np.array(step_new(x1,u[m],e2c)).reshape(1,2)
         s += 0.5 * np.sum((goal - x1)**2) + 0.5 * (u[m]**2 *0.1)
-
     return s
 
 # real cost calculation
@@ -87,8 +76,8 @@ def calc_true_cost(state, u, goal):
 
 #if angles for last 5 steos  between -0.4 and 0.4 then sucess otherwise failure
 def model_solved(th):
-
     return all(-0.4<=element <=0.4 for element in th[-5:])
+
 
 def dyn(z_st,e2c):
     h = e2c.trans(z_st.view(1, 2))
@@ -97,11 +86,13 @@ def dyn(z_st,e2c):
     o_ = e2c.fc_o(h).view(2,1)
     A_ = e2c.fc_A(h).view(2,2)
     return A_,B_,o_
+
+
 def angle_normalize(x):
     return ((x + np.pi) % (2 * np.pi)) - np.pi
 
-def MPC(e2c):
 
+def MPC(e2c):
     state = np.array([0.0, 0.0])
     T = 10
     N = 120
@@ -123,10 +114,7 @@ def MPC(e2c):
     goal_1 = torch.tensor(1 - np.array(im3) / 255.0).view(-1,2,48,48).float().to(device)
 
     m_g, s_g = e2c.encode(goal_1).chunk(2, dim=1)
-    z_g = e2c.reparam(m_g, s_g)
     z_g=m_g
-
-    print("z_ggg", z_g)
 
     # start state for mpc_evaluation
     state =np.array([np.random.uniform(np.pi-0.5,np.pi+0.5),0.0])
@@ -147,7 +135,6 @@ def MPC(e2c):
     state1 = torch.tensor(1 - np.array(im3) / 255.0).view(-1,2,48,48).float().to(device)
 
     m_s, s_s = e2c.encode(state1).chunk(2, dim=1)
-    z_st = e2c.reparam(m_s, s_s)
     z_st=m_s
     x_ = []
 
@@ -158,9 +145,6 @@ def MPC(e2c):
 
     th = []
     th_dot = []
-
-
-
     cost = []
     cons = []
 
@@ -176,13 +160,11 @@ def MPC(e2c):
     for s in range(N):
         res = minimize(cost_new, u_, args=(x0,z_g,e2c), method="powell", bounds=bnds)
         u_ = res.x.reshape(T, 1)
-
         u0 = u_[0]
 
         st=np.copy(state)
         th.append(angle_normalize(st[0].item()))
         th_dot.append(state[1])
-
 
         before1 = env.step_from_state(state, np.array([u0]))
         before2 = env.step_from_state(before1, np.array([0.0]))
@@ -199,7 +181,6 @@ def MPC(e2c):
         state1 = torch.tensor(1 - np.array(im3) / 255.0).view(-1, 2,48,48).float().to(device)
 
         m_s, s_s = e2c.encode(state1).chunk(2, dim=1)
-        z_st = e2c.reparam(m_s, s_s)
         z_st=m_s
         A_,B_,o_=dyn(z_st,e2c)
         m_svd,ma_svd=min_svd(A_,B_,o_)
@@ -225,18 +206,12 @@ def MPC(e2c):
         vis_creal.legend()
         vis_cpred.legend()
         vis.tight_layout()
-
     return np.mean(cost), np.mean(np.array(ct_cost)), np.mean(np.array(di_cost)), model_solved(np.array(th)),np.mean(np.array(m_svd1)),np.mean(np.array(ma_svd1))
-
 
 
 if __name__ == '__main__':
     e2c = E2C()
-
-
-    device = torch.device("cpu")
     writer = SummaryWriter()
-
     e2c.eval()
 
     betas=[0.0,0.0005,0.005,0.05,0.5,0.7,0.9,1.0,5.0]
@@ -251,13 +226,6 @@ if __name__ == '__main__':
         writer1.writerow(
             ["lat_cost_mean", "lat_cost_std", "ctrl_cost", "diff_cost", "success", "beta", "log_min_svd","ctrl_cost_std","diff_cost_std","log_max_svd"])
         for beta in betas:
-
-
-            m1 = []
-            sd1 = []
-            ctrl_cost = []
-            success = []
-            diff_cost = []
             m_sv1 = []
             ma_sv1=[]
             print("eval: started")
@@ -268,35 +236,15 @@ if __name__ == '__main__':
             e2c.load_state_dict(torch.load("conv_mul/conv"+str(r_s)+"/mod" + str(beta) + ".pth", map_location=device))
             cost, control_cost, dif_cost, succ, m_sv,ma_sv = zip(*p.map(MPC, [e2c] * trj))
 
-            m1.append(cost)
-            ctrl_cost.append(control_cost)
-            diff_cost.append(dif_cost)
-            success.append(succ)
             m_sv1.append(m_sv)
             ma_sv1.append(ma_sv)
             p.close()
             p.join()
-            solved = [c for c in success]
-            print(solved)
-            print(success)
-            print("mean", m1)
+            print(succ)
+            print("mean", cost)
 
-            per = sum(np.array(solved[0])) / len(solved[0])
+            per = sum(np.array(succ)) / succ.shape[0]
             print(per)
             writer1.writerow(
-                [np.mean(np.array(m1)), np.std(np.array(m1)), np.mean(np.array(ctrl_cost)), np.mean(np.array(diff_cost)),
-                 per, beta, np.mean(np.array(m_sv1)),np.std(np.array(ctrl_cost)),np.std(np.array(diff_cost)),np.mean(np.array(ma_sv1))])
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+                [np.mean(np.array(cost)), np.std(np.array(cost)), np.mean(np.array(control_cost)), np.mean(np.array(dif_cost)),
+                 per, beta, np.mean(np.array(m_sv1)),np.std(np.array(control_cost)),np.std(np.array(dif_cost)),np.mean(np.array(ma_sv1))])

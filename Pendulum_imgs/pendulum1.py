@@ -63,8 +63,6 @@ class PendulumEnv1(gym.Env):
 
     def render_state(self, state, mode='rgb_array', close=False):
         theta = angle_normalize(state[0])
-
-
         if self.screen is None:
             pygame.init()
             if mode == "human":
@@ -118,12 +116,9 @@ class PendulumEnv1(gym.Env):
         self.surf = pygame.transform.flip(self.surf, False, True)
         self.screen.blit(self.surf, (0, 0))
 
-
         return np.transpose(
                 np.array(pygame.surfarray.pixels3d(self.screen)), axes=(1, 0, 2)
             )
-
-
 
     def step_from_state(self, state, u):
         th, thdot = state
@@ -133,12 +128,10 @@ class PendulumEnv1(gym.Env):
         dt = self.dt
 
         u = np.clip(u, -self.max_torque, self.max_torque)[0]
-        costs = angle_normalize(th)**2 + .1*thdot**2 + .001*(u**2)
 
         newthdot = thdot + (-3*g/(2*l) * np.sin(th + np.pi) + 3./(m*l**2)*u) * dt
         newth = th + newthdot*dt
         newthdot = np.clip(newthdot, -self.max_speed, self.max_speed) #pylint: disable=E1111
-
         return np.array([newth, newthdot])
 
     def _render(self, mode='human', close=False):
@@ -170,7 +163,7 @@ class PendulumEnv1(gym.Env):
         if self.last_u:
             self.imgtrans.scale = (-self.last_u/2, np.abs(self.last_u)/2)
 
-        return self.viewer.render(return_rgb_array = mode=='rgb_array')
+        return self.viewer.render(return_rgb_array=mode=='rgb_array')
 
 def angle_normalize(x):
     return (((x+np.pi) % (2*np.pi)) - np.pi)

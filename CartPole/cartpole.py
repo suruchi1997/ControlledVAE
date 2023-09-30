@@ -4,7 +4,6 @@ Copied from http://incompleteideas.net/sutton/book/code/pole.c
 permalink: https://perma.cc/C9ZM-652R
 Continuous version by Ian Danforth
 """
-
 import math
 import gym
 from gym import spaces, logger
@@ -13,6 +12,8 @@ import numpy as np
 
 import pygame
 from pygame import gfxdraw
+
+
 class ContinuousCartPoleEnv(gym.Env):
     metadata = {
         'render.modes': ['human', 'rgb_array'],
@@ -81,11 +82,6 @@ class ContinuousCartPoleEnv(gym.Env):
         return (x,x_dot,theta,np.clip(theta_dot,-3.0,3.0))
 
     def step(self, action):
-
-        # assert self.action_space.contains(action), \
-        #     "%r (%s) invalid" % (action, type(action))
-        # # Cast action to float to strip np trappings
-        print(type(action))
         force = self.force_mag * float(action)
         self.state = self.stepPhysics(force)
         x, x_dot, theta, theta_dot = self.state
@@ -114,7 +110,6 @@ class ContinuousCartPoleEnv(gym.Env):
         return np.array(self.state), reward, done, {}
 
     def reset(self,ang):
-        # self.state = self.np_random.uniform(low=-0.05, high=0.05, size=(4,))
         self.state = np.array([np.random.uniform(low=-2, high=2),
                                np.random.uniform(low=-6, high=6),
                                ang,
@@ -122,79 +117,15 @@ class ContinuousCartPoleEnv(gym.Env):
         self.steps_beyond_done = None
         return np.array(self.state)
 
-
-    # def reset1(self,ang):
-    #     self.state=np.array([np.random.uniform(low=-0.05, high=0.05),
-    #                             np.random.uniform(low=-0.05, high=0.05),np.random.uniform(-3,3),np.random.uniform(low=-0.05, high=0.05)])
-    #     # self.state = self.np_random.uniform(low=-0.05, high=0.05, size=(4,))
-    #     self.steps_beyond_done = None
-    #     return np.array(self.state)
     def reset_goal(self):
         self.state=np.array([0,0,0,0])
-        # self.state = self.np_random.uniform(low=-0.05, high=0.05, size=(4,))
-        self.steps_beyond_done = None
-        return np.array(self.state)
-    def reset_start(self):
-        #self.state=np.array([1e-2,1e-2,1e-2,1e-2])
-        self.state=np.array([1e-2,1e-2,np.random.uniform(0,np.pi/8),1e-2])
-        # self.state = self.np_random.uniform(low=-0.05, high=0.05, size=(4,))
         self.steps_beyond_done = None
         return np.array(self.state)
 
-    # def render(self, mode='human'):
-    #     screen_width = 600
-    #     screen_height = 400
-    #
-    #     world_width = self.x_threshold * 2
-    #     scale = screen_width /world_width
-    #     carty = 100  # TOP OF CART
-    #     polewidth = 10.0
-    #     polelen = scale * 1.0
-    #     cartwidth = 50.0
-    #     cartheight = 30.0
-    #
-    #     if self.viewer is None:
-    #         from gym.envs.classic_control import rendering
-    #         self.viewer = rendering.Viewer(screen_width, screen_height)
-    #         l, r, t, b = -cartwidth / 2, cartwidth / 2, cartheight / 2, -cartheight / 2
-    #         axleoffset = cartheight / 4.0
-    #         cart = rendering.FilledPolygon([(l, b), (l, t), (r, t), (r, b)])
-    #         self.carttrans = rendering.Transform()
-    #         cart.add_attr(self.carttrans)
-    #         self.viewer.add_geom(cart)
-    #         l, r, t, b = -polewidth / 2, polewidth / 2, polelen-polewidth / 2, -polewidth / 2
-    #         pole = rendering.FilledPolygon([(l, b), (l, t), (r, t), (r, b)])
-    #         pole.set_color(.8, .6, .4)
-    #         self.poletrans = rendering.Transform(translation=(0, axleoffset))
-    #         pole.add_attr(self.poletrans)
-    #         pole.add_attr(self.carttrans)
-    #         self.viewer.add_geom(pole)
-    #         self.axle = rendering.make_circle(polewidth / 2)
-    #         self.axle.add_attr(self.poletrans)
-    #         self.axle.add_attr(self.carttrans)
-    #         self.axle.set_color(.5, .5, .8)
-    #         self.viewer.add_geom(self.axle)
-    #         self.track = rendering.Line((0, carty), (screen_width, carty))
-    #         self.track.set_color(0, 0, 0)
-    #         self.viewer.add_geom(self.track)
-    #
-    #     if self.state is None:
-    #         return None
-    #
-    #     x = self.state
-    #     cartx = x[0] * scale + screen_width / 2.0  # MIDDLE OF CART
-    #     self.carttrans.set_translation(cartx, carty)
-    #     self.poletrans.set_rotation(-x[2])
-    #
-    #     return self.viewer.render(return_rgb_array=(mode == 'rgb_array'))
-    #
-    # def close(self):
-    #     if self.viewer:
-    #         self.viewer.close()
-    #
-    #
-    #
-    #
+    def reset_start(self):
+        self.state=np.array([1e-2,1e-2,np.random.uniform(0,np.pi/8),1e-2])
+        self.steps_beyond_done = None
+        return np.array(self.state)
 
     def render(self,render_mode):
         if render_mode is None:
@@ -204,15 +135,6 @@ class ContinuousCartPoleEnv(gym.Env):
                 f'e.g. gym("{self.spec.id}", render_mode="rgb_array")'
             )
             return
-
-        # try:
-        #     import pygame
-        #     from pygame import gfxdraw
-        # except ImportError:
-        #     # raise DependencyNotInstalled(
-        #     #     "pygame is not installed, run `pip install gym[classic_control]`"
-        #     # )
-
         if self.screen is None:
             pygame.init()
             if render_mode == "human":
@@ -220,7 +142,7 @@ class ContinuousCartPoleEnv(gym.Env):
                 self.screen = pygame.display.set_mode(
                     (self.screen_width, self.screen_height)
                 )
-            else:  # mode == "rgb_array"
+            else:
                 self.screen = pygame.Surface((self.screen_width, self.screen_height))
         if self.clock is None:
             self.clock = pygame.time.Clock()
@@ -276,21 +198,6 @@ class ContinuousCartPoleEnv(gym.Env):
         gfxdraw.aapolygon(self.surf, pole_coords, (0,0,0))
         gfxdraw.filled_polygon(self.surf, pole_coords, (0,0,0))
 
-        # gfxdraw.aacircle(
-        #     self.surf,
-        #     int(cartx),
-        #     int(carty + axleoffset),
-        #     int(polewidth / 2),
-        #     (129, 132, 203),
-        # )
-        # gfxdraw.filled_circle(
-        #     self.surf,
-        #     int(cartx),
-        #     int(carty + axleoffset),
-        #     int(polewidth / 2),
-        #     (129, 132, 203),
-        # )
-
         gfxdraw.hline(self.surf, 0, self.screen_width, carty-29, (0, 0, 0))
 
         self.surf = pygame.transform.flip(self.surf, False, True)
@@ -313,17 +220,5 @@ class ContinuousCartPoleEnv(gym.Env):
             pygame.quit()
             self.isopen = False
 
-
-
-
-
 def angle_normalize(x):
     return ((x + np.pi) % (2 * np.pi)) - np.pi
-
-
-
-
-
-
-
-

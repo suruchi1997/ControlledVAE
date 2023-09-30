@@ -7,6 +7,8 @@ git clone https://github.com/suruchi1997/Controllability-Constrained-Latent-Mode
 ```
 pip install requirements.txt 
 ```
+*csv_com.py can be used to combine the csv files
+*plots.py can be utilized to calculate "Control Cost Change in %" vs "Degree of Controllability Plot"
 ## For Pendulum_Env
  * make a directory conv_mul
    ```

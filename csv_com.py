@@ -2,7 +2,7 @@ import pandas as pd
 import scipy.stats as stats
 
 df_csv_1=pd.DataFrame()
-
+# add seed values you utilized
 csv_files=[1,2,3]
 
 for file in csv_files:

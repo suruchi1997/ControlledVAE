@@ -1,3 +1,5 @@
+import os
+
 import numpy as np
 import matplotlib.pyplot as plt
 import torch
@@ -213,18 +215,18 @@ if __name__ == '__main__':
     e2c = E2C()
     writer = SummaryWriter()
     e2c.eval()
-
-    betas=[0.0,0.0005,0.005,0.05,0.5,0.7,0.9,1.0,5.0]
-    r_seeds=[1111,123,42,444,54321,5555,789,8888]
+    # find available seeds from the saved models
+    r_seeds = [dir_name[4:] for dir_name in os.listdir("conv_mul") if dir_name.startswith("conv")]
 
     means = {}
     stds = {}
     trj = 15
     for r_s in r_seeds:
-        f = open("conv_mul/0_vel2/"+str(r_s)+ ".csv", 'w', newline='')
+        f = open(f"conv_mul/0_vel2/{r_s}.csv", 'w', newline='')
         writer1 = csv.writer(f)
         writer1.writerow(
             ["lat_cost_mean", "lat_cost_std", "ctrl_cost", "diff_cost", "success", "beta", "log_min_svd","ctrl_cost_std","diff_cost_std","log_max_svd"])
+        betas = [dir_name[3:-4] for dir_name in os.listdir(f"conv_mul/conv{r_s}") if dir_name.startswith("mod")]
         for beta in betas:
             m_sv1 = []
             ma_sv1=[]
@@ -233,7 +235,7 @@ if __name__ == '__main__':
             mp.set_start_method('spawn', force=True)
             p = mp.Pool()
             e2c = E2C()
-            e2c.load_state_dict(torch.load("conv_mul/conv"+str(r_s)+"/mod" + str(beta) + ".pth", map_location=device))
+            e2c.load_state_dict(torch.load(f"conv_mul/conv{r_s}/mod{beta}.pth", map_location=device))
             cost, control_cost, dif_cost, succ, m_sv,ma_sv = zip(*p.map(MPC, [e2c] * trj))
 
             m_sv1.append(m_sv)
@@ -247,4 +249,4 @@ if __name__ == '__main__':
             print(per)
             writer1.writerow(
                 [np.mean(np.array(cost)), np.std(np.array(cost)), np.mean(np.array(control_cost)), np.mean(np.array(dif_cost)),
-                 per, beta, np.mean(np.array(m_sv1)),np.std(np.array(control_cost)),np.std(np.array(dif_cost)),np.mean(np.array(ma_sv1))])
+                 per, float(beta), np.mean(np.array(m_sv1)),np.std(np.array(control_cost)),np.std(np.array(dif_cost)),np.mean(np.array(ma_sv1))])

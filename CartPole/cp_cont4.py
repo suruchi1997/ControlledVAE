@@ -332,7 +332,7 @@ def train(
         optimizer.step()
 
     if not os.path.exists("conv_new1/conv" + str(seed)):
-        os.mkdir("conv_new1/conv" + str(seed))
+        os.makedirs("conv_new1/conv" + str(seed))
     if not base_mod:
         torch.save(e2c.state_dict(), "conv_new1/conv" + str(seed) + "/mod" + str(beta) + ".pth")
     else:

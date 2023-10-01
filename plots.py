@@ -1,9 +1,8 @@
-
 import matplotlib.pyplot as plt
 from scipy.interpolate import interp1d
 from scipy.interpolate import make_interp_spline
 import numpy as np
-import  pandas as pd
+import pandas as pd
 
 
 # Assuming df1 is your DataFrame
@@ -15,7 +14,6 @@ cost_0=float(df1[df1["beta"]==0]["total_cost"])
 df1["per_change"] = ((df1["total_cost"]-cost_0)/cost_0)*100
 df1["expsq_cost"] = np.exp(df1["total_cost"]**2)
 df1['expsq_cost_smoothed'] = df1["expsq_cost"].rolling(window=3, min_periods=1).mean()
-
 
 x = np.arange(0, len(df1["beta"]), 1)
 y = df1["log_min_svd"]

@@ -1,15 +1,18 @@
+import argparse
+import os
+from datetime import datetime
+
 import numpy as np
 import matplotlib.pyplot as plt
 import torch
 import sys
 from scipy.optimize import minimize
-from cp_cont4 import E2C
-from cartpole import  ContinuousCartPoleEnv
+from train import E2C
+from cartpole import ContinuousCartPoleEnv
 from PIL import Image
-from torch.utils.tensorboard import SummaryWriter
 from itertools import repeat
 import multiprocessing as mp
-import  csv
+import csv
 
 
 sys.setrecursionlimit(3000)
@@ -112,8 +115,8 @@ def MPC(e2c):
     z_st=m_s
     x_ = []
     x_.append(np.array([0.1, 0.0]))
-    u_ = np.zeros((T, 1))
-    x0 = z_st.cpu().detach().numpy()
+    u_ = np.zeros((T,))
+    x0 = z_st.cpu().detach().numpy().squeeze()
     th = []
     cost = []
     cons = []
@@ -127,7 +130,7 @@ def MPC(e2c):
     plt.ion()
     for s in range(N):
         res = minimize(cost_new, u_, args=(x0,z_g,e2c), method="powell", bounds=bnds,tol=1e-2)
-        u_ = res.x.reshape(T, 1)
+        u_ = res.x
         u0 = u_[0]
         # if optimal action positive apply force of 10N else -10 N
         if u0 < 0:
@@ -151,38 +154,42 @@ def MPC(e2c):
         m_svd1.append(m_svd)
         ma_svd1.append(ma_svd)
         det_1.append(det1)
-
-        state = raw_img_before
         dif_cost, control_cost = calc_true_cost(st, u0, [0,0,0,0])
-        print("res",res.fun)
         di_cost.append(dif_cost)
         ct_cost.append(control_cost)
-        x0 = z_st.cpu().detach().numpy()
+        x0 = z_st.cpu().detach().numpy().squeeze()
         cons.append(u0)
         cost.append(float(res.fun))
         th.append(st[2])
-
     return np.mean(cost), np.mean(np.array(ct_cost)), np.mean(np.array(di_cost)), model_solved(np.array(th)),np.mean(np.array(m_svd1)),np.mean(np.array(ma_svd1)),np.mean(np.array(det_1))
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--rs', default=None, type=int, help='Random seed')
+    parser.add_argument('--beta', default=None, type=float, help='Beta value')
+    args = parser.parse_args()
     e2c = E2C()
-    device = torch.device("cpu")
-    writer = SummaryWriter()
     e2c.eval()
-
-    betas=[0.0,0.0005,0.0007,0.002,0.004,0.005,0.007,0.01,0.05,0.5,0.7,0.9,1.0]
-    r_seeds=[1,2,3,4,5,6,7,8]
+    if args.rs is None:
+        # find available seeds from the saved models
+        r_seeds = [dir_name for dir_name in os.listdir("models")]
+        print(f"seed not provided, evaluating seeds in sequence. Available seeds:\n{r_seeds}")
+    else:
+        r_seeds = [args.rs]
 
     means = {}
     stds = {}
     trj = 15
+    beta_print_once = False
     for r_s in r_seeds:
-
-        f = open(f"models/{r_s}.csv", 'w', newline='')
-        writer1 = csv.writer(f)
-        writer1.writerow(
-            ["lat_cost_mean", "lat_cost_std", "ctrl_cost", "diff_cost", "success", "beta", "log_min_svd","ctrl_cost_std","diff_cost_std","log_max_svd","det_mean"])
+        if args.beta is None:
+            betas = [dir_name[3:-4] for dir_name in os.listdir(f"models/{r_s}") if dir_name.startswith("mod")]
+            if not beta_print_once:
+                print(f"beta not provided, evaluating betas in sequence. Available betas:\n{betas}")
+                beta_print_once = True
+        else:
+            betas = [args.beta]
         for beta in betas:
             m1 = []
             sd1 = []
@@ -192,7 +199,7 @@ if __name__ == '__main__':
             m_sv1 = []
             ma_sv1=[]
             de_1=[]
-            print("eval: started")
+            print(f'{datetime.now().strftime("%H:%M:%S")} eval: started for rs={r_s} beta={beta}')
 
             mp.set_start_method('spawn', force=True)
             p = mp.Pool()
@@ -211,12 +218,16 @@ if __name__ == '__main__':
             p.close()
             p.join()
             solved = [c for c in success]
-            print(solved)
-            print(success)
-            print("mean", m1)
 
             per = sum(np.array(solved[0])) / len(solved[0])
-            print(per)
-            writer1.writerow(
-                [np.mean(np.array(m1)), np.std(np.array(m1)), np.mean(np.array(ctrl_cost)), np.mean(np.array(diff_cost)),
-                 per, beta, np.mean(np.array(m_sv1)),np.std(np.array(ctrl_cost)),np.std(np.array(diff_cost)),np.mean(np.array(ma_sv1)),np.mean(np.array(de_1))])
+            print(f"percent solved: {per}")
+            csv_exists = os.path.isfile(f"models/{r_s}/eval.csv")
+            with open(f"models/{r_s}/eval.csv", 'a', newline='') as f:
+                writer1 = csv.writer(f)
+                if not csv_exists:
+                    writer1.writerow(
+                        ["lat_cost_mean", "lat_cost_std", "ctrl_cost", "diff_cost", "success", "beta", "log_min_svd",
+                         "ctrl_cost_std", "diff_cost_std", "log_max_svd"])
+                writer1.writerow(
+                    [np.mean(np.array(m1)), np.std(np.array(m1)), np.mean(np.array(ctrl_cost)), np.mean(np.array(diff_cost)),
+                     per, beta, np.mean(np.array(m_sv1)),np.std(np.array(ctrl_cost)),np.std(np.array(diff_cost)),np.mean(np.array(ma_sv1)),])

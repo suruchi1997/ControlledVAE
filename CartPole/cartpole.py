@@ -4,15 +4,21 @@ Copied from http://incompleteideas.net/sutton/book/code/pole.c
 permalink: https://perma.cc/C9ZM-652R
 Continuous version by Ian Danforth
 """
+import logging
 import math
+import os
+import sys
+
 import gym
-from gym import spaces, logger
+from gym import spaces
 from gym.utils import seeding
 import numpy as np
 
+# mute pygame init logs
+sys.stdout = open(os.devnull, 'w')
 import pygame
 from pygame import gfxdraw
-
+sys.stdout = sys.__stdout__
 
 class ContinuousCartPoleEnv(gym.Env):
     metadata = {
@@ -50,7 +56,6 @@ class ContinuousCartPoleEnv(gym.Env):
             shape=(1,)
         )
         self.observation_space = spaces.Box(-high, high)
-
         self.seed()
         self.viewer = None
         self.state = None
@@ -98,12 +103,6 @@ class ContinuousCartPoleEnv(gym.Env):
             self.steps_beyond_done = 0
             reward = 1.0
         else:
-            if self.steps_beyond_done == 0:
-                logger.warn("""
-              You are calling 'step()' even though this environment has already returned
-              done = True. You should always call 'reset()' once you receive 'done = True'
-               Any further steps are undefined behavior.
-                """)
             self.steps_beyond_done += 1
             reward = 0.0
 

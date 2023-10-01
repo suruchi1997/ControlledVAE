@@ -51,10 +51,8 @@ def data_coll(t_size,use_cached=True):
     ac = []
 
     angs=np.random.uniform(-np.pi/2,np.pi/2,size=t_size)
-    acts=[-1,0,1]
     for i,j in enumerate(angs):
         env.reset(j)
-
         img1 = env.render("rgb_array")
         env.step(0.0)
         img2 = env.render("rgb_array")
@@ -99,13 +97,10 @@ def compute_loss(x, x_next, q_z_next, x_recon, x_next_pred, q_z, q_z_next_pred, 
     lower_bound = recon_term + pred_loss + kl_term
     consis_term = NormalDistribution.KL_divergence(q_z_next_pred, q_z_next)
 
-    return lower_bound + lamda * consis_term - beta* min_svd_mean, (consis_term, kl_term, recon_term, pred_loss)
+    return lower_bound + lamda * consis_term - beta* min_svd_mean
 
 #Normal Distribution  return cov matrix
 def NormDist(mean, logvar, A=None):
-    mean = mean
-    logvar = logvar
-
     sigma = torch.diag_embed(torch.exp(logvar))
     if A is None:
         cov = sigma
@@ -264,10 +259,9 @@ def train(
         training_size=15000,
         lr=0.0001,
         beta=0.05,
-        make_figs=False,
-        base_mod=False,
         seed=0,
-        logging_interval=2000
+        logging_interval=2000,
+        train_base_mod=False,
 ):
     gym.logger.set_level(40)
     curr, next, ac = data_coll(training_size)
@@ -278,16 +272,14 @@ def train(
     e2c = E2C().to(device)
     optimizer = optim.Adam(e2c.parameters(), lr=lr)
 
-    if base_mod:
-        epochs= 70000
-    else:
-        e2c.load_state_dict(torch.load("models/" + str(seed) + "/base_mod.pth", map_location=device))
+    # base model has to be learned first
+    if not os.path.exists(f"models/{seed}/base_mod.pth") and not train_base_mod:
+        print(f"base model not found for seed {seed}, training base model")
+        train(batch_size=batch_size, epochs=70000, training_size=training_size, lr=lr, beta=0.0, make_figs=False,)
 
-    consi1 = []
-    kl1 = []
-    rec1 = []
-    pred1 = []
-    min_eig = []
+    if not train_base_mod:
+        e2c.load_state_dict(torch.load("models/" + str(seed) + "/base_mod.pth", map_location=device))
+        print(f"training model with beta={beta}")
 
     for i in range(epochs):
         e2c.train()
@@ -300,12 +292,7 @@ def train(
         x_p1 = n1[start_idx:start_idx + batch_size]
         x_recon, x_next_pred, q_z, q_z_next_pred, q_z_next, min_svd_mean = e2c(x_t1, u_t1, x_p1,batch_size)
 
-        total, (consis_term, kl_term, recon_term, pred_loss) = compute_loss(x_t1, x_p1, q_z_next, x_recon, x_next_pred, q_z, q_z_next_pred, min_svd_mean,batch_size, 1.0,beta)
-
-        consi1.append(consis_term.item())
-        kl1.append(kl_term.item())
-        rec1.append(recon_term.item())
-        pred1.append(pred_loss.item())
+        total = compute_loss(x_t1, x_p1, q_z_next, x_recon, x_next_pred, q_z, q_z_next_pred, min_svd_mean,batch_size, 1.0,beta)
 
         if (i+1)%logging_interval==0:
             print(f'{datetime.now().strftime("%H:%M:%S")} epoch {i+1}/{epochs} loss: {total.item()}')
@@ -316,54 +303,36 @@ def train(
 
     if not os.path.exists(f"models/{seed}"):
         os.makedirs(f"models/{seed}")
-    if not base_mod:
+    if not train_base_mod:
         torch.save(e2c.state_dict(), f"models/{seed}/mod{beta}.pth")
     else:
         torch.save(e2c.state_dict(), f"models/{seed}/base_mod.pth")
 
-    # plotting loss components
-    if make_figs:
-        plt.subplot(321)
-        plt.plot(rec1)
-        plt.title("recon")
-
-        plt.subplot(322)
-        plt.plot(pred1)
-        plt.title("pred")
-
-        plt.subplot(323)
-        plt.plot(kl1)
-        plt.title("kl_div")
-
-        plt.subplot(324)
-        plt.plot(consi1)
-        plt.title("consis")
-
-        plt.subplot(326)
-        plt.plot(min_eig)
-        plt.title("min_svd_grammain")
-        if not base_mod:
-            plt.savefig("models/" + str(seed) + "/plot" + str(beta) + ".png")
-            plt.show()
-
 
 if __name__ == '__main__':
+    os.environ['SDL_VIDEODRIVER'] = 'dummy'
     env = ContinuousCartPoleEnv()
     parser = argparse.ArgumentParser()
-    parser.add_argument('--rs', default=None, type=int, help='Random seed')
+    parser.add_argument('--rs',   default=None, type=int, help='Random seed')
+    parser.add_argument('--beta', default=None, type=float, help='Beta value')
     args = parser.parse_args()
     if args.rs is None:
-        seed = random.randint(0, 1e16)
+        with open('rseeds.txt', 'r') as f:
+            seeds = [int(n) for n in f.readline().split(',')]
+        print(f"seed not provided, training seeds in sequence. Available seeds:\n{seeds}")
     else:
-        seed = args.rs
-    torch.manual_seed(seed)
-
-    os.environ['SDL_VIDEODRIVER'] = 'dummy'
-    betas = ["base_mod",0.0,0.0005,0.0007,0.007,0.002,0.004,0.01,0.005,0.05,0.5,0.7,0.9,1.0]
-    if not os.path.exists("conv_mul/"):
-        os.mkdir("conv_mul/")
-    for b in betas:
-        if b == "base_mod":
-            train(beta=0, make_figs=True, base_mod=True, seed=seed)
+        seeds = [args.rs]
+    beta_print_once = False
+    for seed in seeds:
+        torch.manual_seed(seed)
+        if args.beta is not None:
+            beta = args.beta
+            train(beta=beta, seed=seed)
         else:
-            train(beta=b, make_figs=True, base_mod=False, seed=seed)
+            with open('betas.txt', 'r') as f:
+                betas = [float(n) for n in f.readline().split(',')]
+            if not beta_print_once:
+                print(f"beta not provided, training betas in sequence. Available betas:\n{betas}")
+                beta_print_once = True
+            for beta in betas:
+                train(beta=beta, seed=seed)

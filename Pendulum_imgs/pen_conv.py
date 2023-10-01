@@ -1,3 +1,5 @@
+from datetime import datetime
+
 import torch
 import torch.nn as nn
 from pendulum1 import PendulumEnv1
@@ -306,8 +308,8 @@ def train(
             x_t1, x_p1, q_z_next, x_recon, x_next_pred, q_z, q_z_next_pred, min_svd_mean,0.45,
             beta=beta, batch_size=batch_size
         )
-        if i % eval_freq == 0:
-            print(start_idx, total)
+        if (i+1)%eval_freq==0:
+            print(f'{datetime.now().strftime("%H:%M:%S")} epoch {i+1}/{epochs} loss: {total.item()}')
 
         optimizer.zero_grad()
         total.backward()

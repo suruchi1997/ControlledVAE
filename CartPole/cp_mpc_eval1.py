@@ -34,7 +34,6 @@ def min_svd(A,B,O):
     mat1 = torch.stack((B, A @ B,A@A@B,A@A@A@B)).view( 4,4)
     gra1 = (mat1.T@mat1)
 
-
     min_svd = torch.min(torch.linalg.svd(gra1)[1])
     max_svd= torch.max(torch.linalg.svd(gra1)[1])
     det1= torch.abs(torch.det(gra1))
@@ -45,18 +44,16 @@ def step_new(x,u,e2c):
     x = torch.tensor(x).float().view(1, 4).to(device)
     h = e2c.trans(x.view(1, 4))
 
-
     con = torch.tensor([u]).view(1, 1).float().to(device)
     B_ = e2c.fc_B(h)
     o_ = e2c.fc_o(h)
     A_ = e2c.fc_A(h)
     x = torch.mm(A_.view(4,4), x.view(4, 1)) + torch.mm(B_.view(4, 1), con.view(1, 1)) + o_.view(4, 1)
-
     if torch.is_tensor(x):
-
         return x.cpu().detach().numpy()
     else:
         return x
+
 # cost function
 def cost_new(u,x_t,z_g,e2c):
     x1 = np.array(x_t).reshape(1,4)
@@ -90,30 +87,28 @@ def MPC(e2c):
     N = 100
     env = ContinuousCartPoleEnv()
     env.reset_goal()
-    b1 = env.render('rgb_array')
+    raw_img_before = env.render('rgb_array')
     env.step(0.0)
-    b2 = env.render('rgb_array')
+    raw_img_after = env.render('rgb_array')
 
-    im1 = Image.fromarray(b1).convert('L').resize((80, 80))
-    im2 = Image.fromarray(b2).convert('L').resize((80, 80))
-    im3 = np.hstack((im1, im2))
-    goal_1 = torch.tensor(1 - np.array(im3) / 255.0).view(-1,2,80,80).float().to(device)
+    img_before = Image.fromarray(raw_img_before).convert('L').resize((80, 80))
+    img_after =  Image.fromarray(raw_img_after).convert('L').resize((80, 80))
+    img_state =  np.hstack((img_before, img_after))
+    goal_1 = torch.tensor(1 - np.array(img_state) / 255.0).view(-1,2,80,80).float().to(device)
 
     m_g, s_g = e2c.encode(goal_1).chunk(2, dim=1)
     z_g = e2c.reparam(m_g, s_g)
 
     env.reset_start()
-    b1 = env.render('rgb_array')
+    raw_img_before = env.render('rgb_array')
     env.step(0.0)
-    b2 = env.render('rgb_array')
-    im1 = Image.fromarray(b1).convert('L').resize((80, 80))
-    im2 = Image.fromarray(b2).convert('L').resize((80, 80))
+    raw_img_after = env.render('rgb_array')
+    img_before = Image.fromarray(raw_img_before).convert('L').resize((80, 80))
+    img_after = Image.fromarray(raw_img_after).convert('L').resize((80, 80))
+    img_state = np.hstack((img_before, img_after))
+    img_state_normalized = torch.tensor(1 - np.array(img_state) / 255.0).view(-1,2,80,80).float().to(device)
 
-
-    im3 = np.hstack((im1, im2))
-    state1 = torch.tensor(1 - np.array(im3) / 255.0).view(-1,2,80,80).float().to(device)
-
-    m_s, s_s = e2c.encode(state1).chunk(2, dim=1)
+    m_s, s_s = e2c.encode(img_state_normalized).chunk(2, dim=1)
     z_st=m_s
     x_ = []
     x_.append(np.array([0.1, 0.0]))
@@ -140,16 +135,16 @@ def MPC(e2c):
         elif u0 > 0:
             st = env.step(10.0)[0]
 
-        b1 = env.render('rgb_array')
+        raw_img_before = env.render('rgb_array')
         env.step(0.0)
-        b2 = env.render('rgb_array')
+        raw_img_after = env.render('rgb_array')
 
-        im1 = Image.fromarray(b1).convert('L').resize((80, 80))
-        im2 = Image.fromarray(b2).convert('L').resize((80, 80))
-        im3 = np.hstack((im1, im2))
-        state1 = torch.tensor(1 - np.array(im3) / 255.0).view(-1, 2, 80, 80).float().to(device)
+        img_before = Image.fromarray(raw_img_before).convert('L').resize((80, 80))
+        img_after = Image.fromarray(raw_img_after).convert('L').resize((80, 80))
+        img_state = np.hstack((img_before, img_after))
+        img_state_normalized = torch.tensor(1 - np.array(img_state) / 255.0).view(-1, 2, 80, 80).float().to(device)
 
-        m_s, s_s = e2c.encode(state1).chunk(2, dim=1)
+        m_s, s_s = e2c.encode(img_state_normalized).chunk(2, dim=1)
         z_st = m_s
         A_,B_,o_=dyn(z_st,e2c)
         m_svd,ma_svd,det1=min_svd(A_,B_,o_)
@@ -157,7 +152,7 @@ def MPC(e2c):
         ma_svd1.append(ma_svd)
         det_1.append(det1)
 
-        state = b1
+        state = raw_img_before
         dif_cost, control_cost = calc_true_cost(st, u0, [0,0,0,0])
         print("res",res.fun)
         di_cost.append(dif_cost)
@@ -168,7 +163,6 @@ def MPC(e2c):
         th.append(st[2])
 
     return np.mean(cost), np.mean(np.array(ct_cost)), np.mean(np.array(di_cost)), model_solved(np.array(th)),np.mean(np.array(m_svd1)),np.mean(np.array(ma_svd1)),np.mean(np.array(det_1))
-
 
 
 if __name__ == '__main__':
@@ -185,7 +179,7 @@ if __name__ == '__main__':
     trj = 15
     for r_s in r_seeds:
 
-        f = open("conv_new1/"+str(r_s)+ ".csv", 'w', newline='')
+        f = open(f"models/{r_s}.csv", 'w', newline='')
         writer1 = csv.writer(f)
         writer1.writerow(
             ["lat_cost_mean", "lat_cost_std", "ctrl_cost", "diff_cost", "success", "beta", "log_min_svd","ctrl_cost_std","diff_cost_std","log_max_svd","det_mean"])
@@ -204,7 +198,7 @@ if __name__ == '__main__':
             p = mp.Pool()
             e2c = E2C()
 
-            e2c.load_state_dict(torch.load("conv_new1/conv"+str(r_s)+"/mod" + str(beta) + ".pth", map_location=device))
+            e2c.load_state_dict(torch.load(f"models/{r_s}/mod{beta}.pth", map_location=device))
             cost, control_cost, dif_cost, succ, m_sv,ma_sv,de1 = zip(*p.map(MPC, [e2c] * trj))
 
             m1.append(cost)

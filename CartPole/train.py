@@ -275,7 +275,7 @@ def train(
     # base model has to be learned first
     if not os.path.exists(f"models/{seed}/base_mod.pth") and not train_base_mod:
         print(f"base model not found for seed {seed}, training base model")
-        train(batch_size=batch_size, epochs=70000, training_size=training_size, lr=lr, beta=0.0, make_figs=False,)
+        train(batch_size=batch_size, epochs=70000, training_size=training_size, lr=lr, beta=0.0, train_base_mod=True)
 
     if not train_base_mod:
         e2c.load_state_dict(torch.load("models/" + str(seed) + "/base_mod.pth", map_location=device))

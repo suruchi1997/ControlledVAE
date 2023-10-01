@@ -260,8 +260,7 @@ def train(
         lr=0.0003,
         beta=0.05,
         eval_freq=5000,
-        debug_vis=False,
-        base_mod=False,
+        train_base_mod=False,
         seed=0,
 ):
     """
@@ -277,14 +276,14 @@ def train(
     e2c = E2C(device).to(device)
     optimizer = optim.Adam(e2c.parameters(), lr=lr)
 
-    if debug_vis:
-        plt.ion()
+    # base model has to be learned first
+    if not os.path.exists(f"models/{seed}/base_mod.pth") and not train_base_mod:
+        print(f"base model not found for seed {seed}, training base model")
+        train(batch_size=batch_size, epochs=70000, training_size=training_size, lr=lr, beta=0.0, train_base_mod=True)
 
-    if base_mod:
-        epochs=100000
-
-    if not base_mod:
-        e2c.load_state_dict(torch.load("models/conv"+str(seed)+"/base_mod.pth", map_location=device))
+    if not train_base_mod:
+        e2c.load_state_dict(torch.load(f"models/{seed}/base_mod.pth", map_location=device))
+        print(f"training model with beta={beta}")
 
     for i in range(epochs):
         e2c.train()
@@ -308,12 +307,12 @@ def train(
         total.backward()
         optimizer.step()
 
-    if not os.path.exists("models/conv" + str(seed)):
-        os.mkdir("models/conv" + str(seed))
-    if not base_mod:
-        torch.save(e2c.state_dict(), "models/conv"+str(seed)+"/mod" + str(beta) + ".pth")
+    if not os.path.exists(f"models/{seed}"):
+        os.mkdir(f"models/{seed}")
+    if not train_base_mod:
+        torch.save(e2c.state_dict(), f"models/{seed}/mod{beta}.pth")
     else:
-        torch.save(e2c.state_dict(), "models/conv"+str(seed)+"/base_mod.pth")
+        torch.save(e2c.state_dict(), f"models/{seed}/base_mod.pth")
 
 
 if __name__ == "__main__":

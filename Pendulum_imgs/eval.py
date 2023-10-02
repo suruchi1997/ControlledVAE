@@ -245,7 +245,7 @@ if __name__ == '__main__':
             mp.set_start_method('spawn', force=True)
             p = mp.Pool()
             e2c = E2C()
-            e2c.load_state_dict(torch.load(f"conv_mul/conv{r_s}/mod{beta}.pth", map_location=device))
+            e2c.load_state_dict(torch.load(f"models/{r_s}/mod{beta}.pth", map_location=device))
             cost, control_cost, dif_cost, succ, m_sv,ma_sv = zip(*p.map(MPC, [e2c] * trj))
 
             m_sv1.append(m_sv)

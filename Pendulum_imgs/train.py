@@ -262,6 +262,7 @@ def train(
         eval_freq=5000,
         train_base_mod=False,
         seed=0,
+        skip_trained=False,
 ):
     """
     trains either a base model or a controllability model.
@@ -280,6 +281,10 @@ def train(
     if not os.path.exists(f"models/{seed}/base_mod.pth") and not train_base_mod:
         print(f"base model not found for seed {seed}, training base model")
         train(batch_size=batch_size, epochs=100000, training_size=training_size, lr=lr, beta=0.0, train_base_mod=True, seed=seed)
+
+    if os.path.exists(f"models/{seed}/mod{beta}.pth") and skip_trained:
+        print(f"model with beta={beta} already trained for seed {seed}, skipping")
+        return
 
     if not train_base_mod:
         e2c.load_state_dict(torch.load(f"models/{seed}/base_mod.pth", map_location=device))
@@ -321,6 +326,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--rs',   default=None, type=int, help='Random seed')
     parser.add_argument('--beta', default=None, type=float, help='Beta value')
+    parser.add_argument('--skip-trained', default=True, type=float, help='If true, skip training if model exists')
     args = parser.parse_args()
     if args.rs is None:
         with open('rseeds.txt', 'r') as f:
@@ -333,7 +339,7 @@ if __name__ == "__main__":
         torch.manual_seed(seed)
         if args.beta is not None:
             beta = args.beta
-            train(beta=beta, seed=seed)
+            train(beta=beta, seed=seed, skip_trained=args.skip_trained)
         else:
             with open('betas.txt', 'r') as f:
                 betas = [float(n) for n in f.readline().split(',')]
@@ -341,4 +347,4 @@ if __name__ == "__main__":
                 print(f"beta not provided, training betas in sequence. Available betas:\n{betas}")
                 beta_print_once = True
             for beta in betas:
-                train(beta=beta, seed=seed)
+                train(beta=beta, seed=seed, skip_trained=args.skip_trained)

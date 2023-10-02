@@ -308,7 +308,7 @@ def train(
         optimizer.step()
 
     if not os.path.exists(f"models/{seed}"):
-        os.mkdir(f"models/{seed}")
+        os.makedirs(f"models/{seed}")
     if not train_base_mod:
         torch.save(e2c.state_dict(), f"models/{seed}/mod{beta}.pth")
     else:

@@ -19,6 +19,7 @@ Regenerating model results for each experiment is divided into a few steps:
 2. Training N models within a range of beta values based on each baseline model. Beta values 
 have to be consistent across all seeds. We provide a range of beta values in `betas.txt`.
 3. Evaluating all trained models.
+4. Making plots.
 
 ## Experiments 
 
@@ -36,6 +37,6 @@ and `betas.txt` to train N models for each rseed.
 
 ## Making plots
 1. `cd <experiment>`
-2. `python ../csv_com.py` - generate csv files. 
+2. `python ../csv_com.py` - generate csv files based on evaluation results. 
 3. `python ../plots.py` - generate the "Control Cost Change in %" vs "Degree of Controllability" plot.
     

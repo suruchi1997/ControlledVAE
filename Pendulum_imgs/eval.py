@@ -141,9 +141,9 @@ def MPC(e2c):
     x_ = []
 
     x_.append(np.array([0.1, 0.0]))
-    u_ = np.zeros((T, 1))
+    u_ = np.zeros((T,))
 
-    x0 = z_st.cpu().detach().numpy()
+    x0 = z_st.cpu().detach().numpy().squeeze()
 
     th = []
     th_dot = []
@@ -161,7 +161,7 @@ def MPC(e2c):
     pred = plt.figure().add_subplot()
     for s in range(N):
         res = minimize(cost_new, u_, args=(x0,z_g,e2c), method="powell", bounds=bnds)
-        u_ = res.x.reshape(T, 1)
+        u_ = res.x
         u0 = u_[0]
 
         st=np.copy(state)
@@ -193,7 +193,7 @@ def MPC(e2c):
         dif_cost, control_cost = calc_true_cost(state1, u0, goal)
         di_cost.append(dif_cost)
         ct_cost.append(control_cost)
-        x0 = z_st.cpu().detach().numpy()
+        x0 = z_st.cpu().detach().numpy().squeeze()
         cons.append(u0)
         cost.append(float(res.fun))
 
@@ -246,14 +246,14 @@ if __name__ == '__main__':
             p = mp.Pool()
             e2c = E2C()
             e2c.load_state_dict(torch.load(f"models/{r_s}/mod{beta}.pth", map_location=device))
-            cost, control_cost, dif_cost, succ, m_sv,ma_sv = zip(*p.map(MPC, [e2c] * trj))
+            cost, control_cost, dif_cost, succ, m_sv, ma_sv = zip(*p.map(MPC, [e2c] * trj))
 
             m_sv1.append(m_sv)
             ma_sv1.append(ma_sv)
             p.close()
             p.join()
 
-            per = sum(np.array(succ)) / succ.shape[0]
+            per = sum(np.array(succ)) / len(succ)
             print(f"percent solved: {per}")
             csv_exists = os.path.isfile(f"models/{r_s}/eval.csv")
             with open(f"models/{r_s}/eval.csv", 'w', newline='') as f:

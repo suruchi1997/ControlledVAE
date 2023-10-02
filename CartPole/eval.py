@@ -194,7 +194,6 @@ if __name__ == '__main__':
             m1 = []
             sd1 = []
             ctrl_cost = []
-            success = []
             diff_cost = []
             m_sv1 = []
             ma_sv1=[]
@@ -211,15 +210,13 @@ if __name__ == '__main__':
             m1.append(cost)
             ctrl_cost.append(control_cost)
             diff_cost.append(dif_cost)
-            success.append(succ)
             m_sv1.append(m_sv)
             ma_sv1.append(ma_sv)
             de_1.append(de1)
             p.close()
             p.join()
-            solved = [c for c in success]
 
-            per = sum(np.array(solved[0])) / len(solved[0])
+            per = sum(np.array(succ)) / len(succ)
             print(f"percent solved: {per}")
             csv_exists = os.path.isfile(f"models/{r_s}/eval.csv")
             with open(f"models/{r_s}/eval.csv", 'a', newline='') as f:

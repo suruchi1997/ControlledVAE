@@ -4,7 +4,7 @@
 
 1. clone the repo:     
 ```
-git clone https://github.com/suruchi1997/Controllability-Constrained-Latent-Models.git
+git clone https://github.com/suruchi1997/ControlledVAE.git
 ```
 2. setup the anaconda environment:       
 cuda: `conda env create --file env_cuda.yml`       

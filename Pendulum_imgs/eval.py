@@ -256,7 +256,7 @@ if __name__ == '__main__':
             per = sum(np.array(succ)) / len(succ)
             print(f"percent solved: {per}")
             csv_exists = os.path.isfile(f"models/{r_s}/eval.csv")
-            with open(f"models/{r_s}/eval.csv", 'w', newline='') as f:
+            with open(f"models/{r_s}/eval.csv", 'a', newline='') as f:
                 writer1 = csv.writer(f)
                 # add the first row of the csv file
                 if not csv_exists:

@@ -30,10 +30,14 @@ Both Pendulum and Cartpole follow the similar steps for training and evaluating 
    use `python train.py` to train all models in sequence. Will use `rseeds.txt` to train M base models,
 and `betas.txt` to train N models for each rseed.    
 * (option B) Parallelized training:
-  1. Train M base models + beta=0 in parallel ```python train.py --rs {integer} --beta 0.0```
-  2. Train N models for each remaining beta value, using ```python train.py --rs {integer} --beta {float}```       
+  1. Train M base models + beta=0 in parallel ```python train.py --rs {integer} --beta 0.0```   
+    Slurm script for training all base models: ```sbatch train_parallel_base.sh```
+  2. Train N models for each remaining beta value, using ```python train.py --rs {integer} --beta {float}```    
+    Slurm script for training the rest of the models: ```sbatch train_parallel_ctrl.sh```
 * (option C) Run B.ii in parallel for all rseed-beta combinations if the overhead of re-learning the base model is not a concern.
-2. Then `eval.py` is used to execute the evaluation process. Same options as for training.
+2. Then `python eval.py` is used to execute the evaluation process. Same options as for training.   
+    slurm script for evaluation: ```sbatch eval_parallel.sh```    
+
 
 ## Making plots
 1. `cd <experiment>`

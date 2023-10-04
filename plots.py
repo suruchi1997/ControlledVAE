@@ -46,4 +46,5 @@ lines2, labels2 = ax2.get_legend_handles_labels()
 lines += lines2
 labels += labels2
 fig.legend(lines, labels, loc="upper left",bbox_to_anchor=(0.2, 0.92), fontsize=22)
+plt.savefig("fig.png",dpi=300)
 plt.show()

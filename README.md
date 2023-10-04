@@ -43,4 +43,8 @@ and `betas.txt` to train N models for each rseed.
 1. `cd <experiment>`
 2. `python ../csv_com.py` - generate csv files based on evaluation results. 
 3. `python ../plots.py` - generate the "Control Cost Change in %" vs "Degree of Controllability" plot.
+
+## Link to Datasets
+https://drive.google.com/drive/u/0/folders/1piegH2gSNOG6WZtlOgSI3MLtDAUxj7ng
+**Above is the link to datasets in order to regenerate the following results.The model can be data set oriented and has a lot of scope for improvement 
     

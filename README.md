@@ -47,5 +47,5 @@ and `betas.txt` to train N models for each rseed.
 ## Link to Datasets
 https://drive.google.com/drive/u/0/folders/1piegH2gSNOG6WZtlOgSI3MLtDAUxj7ng
 
-* Above is the link to datasets in order to regenerate the following results.The model can be data set oriented and has a lot of scope for improvement 
+# Above is the link to datasets in order to regenerate the results in paper. The model can be data set oriented and has a lot of scope for improvement 
     

@@ -44,7 +44,7 @@ and `betas.txt` to train N models for each rseed.
 2. `python ../csv_com.py` - generate csv files based on evaluation results. 
 3. `python ../plots.py` - generate the "Control Cost Change in %" vs "Degree of Controllability" plot.
 
-## Hardware used
+## GPU's used
 ### For Pendulum
 NVIDIA P-100 GPUs
 ### For CartPole

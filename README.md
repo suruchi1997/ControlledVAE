@@ -45,9 +45,9 @@ and `betas.txt` to train N models for each rseed.
 3. `python ../plots.py` - generate the "Control Cost Change in %" vs "Degree of Controllability" plot.
 
 ## Hardware used
-# For Pendulum
+### For Pendulum
 NVIDIA P-100 GPUs
-# For CartPole
+### For CartPole
 NVIDIA A100-PCIE-40GB - to speed up the training process for complex system
 
 ## Link to Datasets

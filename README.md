@@ -44,6 +44,8 @@ and `betas.txt` to train N models for each rseed.
 2. `python ../csv_com.py` - generate csv files based on evaluation results. 
 3. `python ../plots.py` - generate the "Control Cost Change in %" vs "Degree of Controllability" plot.
 
+## Hardware used
+NVIDIA P-100 GPUs
 ## Link to Datasets
 https://drive.google.com/drive/u/0/folders/1piegH2gSNOG6WZtlOgSI3MLtDAUxj7ng
 
